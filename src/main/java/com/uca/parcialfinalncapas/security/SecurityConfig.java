@@ -2,6 +2,7 @@ package com.uca.parcialfinalncapas.security;
 
 import com.uca.parcialfinalncapas.service.impl.UserServiceImpl;
 import org.springframework.context.annotation.*;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -61,6 +62,8 @@ public class SecurityConfig {
 
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/login").permitAll()
+                        .requestMatchers(HttpMethod.POST, "api" +
+                                "/users").permitAll()
                         .anyRequest().authenticated()
                 )
 
