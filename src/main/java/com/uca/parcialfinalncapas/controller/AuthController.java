@@ -4,9 +4,9 @@ import com.uca.parcialfinalncapas.dto.AuthenticationRequest;
 import com.uca.parcialfinalncapas.dto.AuthenticationResponse;
 import com.uca.parcialfinalncapas.security.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,19 +14,27 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/auth")
 public class AuthController {
 
-    @Autowired
-    private AuthenticationManager authManager;
+    private final AuthenticationConfiguration authConfig;
+    private final JwtUtil jwtUtil;
 
     @Autowired
-    private JwtUtil jwtUtil;
+    public AuthController(AuthenticationConfiguration authConfig, JwtUtil jwtUtil) {
+        this.authConfig = authConfig;
+        this.jwtUtil = jwtUtil;
+    }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody AuthenticationRequest req) {
+    public AuthenticationResponse login(@RequestBody AuthenticationRequest req) throws Exception {
+        // Obtenemos el AuthenticationManager justo a tiempo
+        AuthenticationManager authManager = authConfig.getAuthenticationManager();
+
+        // Autenticamos las credenciales
         Authentication auth = authManager.authenticate(
                 new UsernamePasswordAuthenticationToken(req.getUsername(), req.getPassword())
         );
 
-        String token = jwtUtil.generateToken(req.getUsername());
-        return ResponseEntity.ok(new AuthenticationResponse(token));
+        // Generamos el JWT sobre el nombre de usuario validado
+        String token = jwtUtil.generateToken(auth.getName());
+        return new AuthenticationResponse(token);
     }
 }

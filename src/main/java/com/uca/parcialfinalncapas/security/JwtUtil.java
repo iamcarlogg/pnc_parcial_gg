@@ -2,6 +2,7 @@ package com.uca.parcialfinalncapas.security;
 
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
 import java.util.Date;
@@ -26,5 +27,22 @@ public class JwtUtil {
                 .parseClaimsJws(token)
                 .getBody()
                 .getSubject();
+    }
+    private Date extractExpiration(String token) {
+        return Jwts.parser()
+                .setSigningKey(SECRET)
+                .parseClaimsJws(token)
+                .getBody()
+                .getExpiration();
+    }
+    // Comprueba si está expirado
+    private Boolean isTokenExpired(String token) {
+        return extractExpiration(token).before(new Date());
+    }
+
+    // Valida sujeto + expiración
+    public Boolean validateToken(String token, UserDetails userDetails) {
+        final String username = extractUsername(token);
+        return (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
     }
 }

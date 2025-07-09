@@ -1,52 +1,60 @@
 package com.uca.parcialfinalncapas.security;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+import com.uca.parcialfinalncapas.service.impl.UserServiceImpl;
+import org.springframework.context.annotation.*;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.bcrypt.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 public class SecurityConfig {
 
-    @Autowired
-    private JwtUtil jwtUtil;
+    private final UserServiceImpl userService;
+    private final JwtRequestFilter jwtFilter;
 
-    @Bean
-    public AuthenticationManager authManager(HttpSecurity http, PasswordEncoder encoder) throws Exception {
-        return http.getSharedObject(AuthenticationManagerBuilder.class)
-                .inMemoryAuthentication()
-                .withUser("user").password(encoder.encode("user123")).roles("USER")
-                .and()
-                .withUser("tech").password(encoder.encode("tech123")).roles("TECH")
-                .and()
-                .passwordEncoder(encoder)
-                .and()
-                .build();
-    }
-
-    @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http
-                .csrf().disable()
-                .authorizeHttpRequests()
-                .requestMatchers("/auth/login").permitAll()
-                .anyRequest().authenticated()
-                .and()
-                .sessionManagement()
-                .sessionCreationPolicy(SessionCreationPolicy.STATELESS);
-        // (Aquí más adelante podrías insertar un filtro JWT si quieres validar token en cada request)
-        return http.build();
+    public SecurityConfig(@Lazy UserServiceImpl userService,
+                          JwtRequestFilter jwtFilter) {
+        this.userService = userService;
+        this.jwtFilter = jwtFilter;
     }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
-}
+
+    @Bean
+    public DaoAuthenticationProvider authenticationProvider(
+            UserServiceImpl userService,
+            PasswordEncoder passwordEncoder) {
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
+        provider.setUserDetailsService(userService);
+        provider.setPasswordEncoder(passwordEncoder);
+        return provider;
+    }
+
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        http
+                .csrf().disable()
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/auth/login").permitAll()
+                        .anyRequest().authenticated()
+                )
+                .sessionManagement(sess ->
+                        sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                );
+
+        // Aquí registramos nuestro filtro justo antes del procesamiento de credenciales
+        http.addFilterBefore(jwtFilter,
+                UsernamePasswordAuthenticationFilter.class
+        );
+
+        return http.build();
+    }
+    }
+
