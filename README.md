@@ -65,3 +65,121 @@ _Si van a crear mas endpoints como el login o registrarse recuerden actualizar p
 - [ ] Probar todos los flujos con Postman/Insomnia/Bruno.
 - [ ] Mostrar que los roles se comportan correctamente.
 - [ ] Incluir usuarios de prueba (`user`, `tech`) y contraseñas.
+
+## Documentación por Partes
+
+### Parte 1: Implementar login con JWT
+
+- **Endpoint:** `POST /auth/login`
+- **Request:** JSON con `username` y `password`.
+- **Validación:** Credenciales verificadas contra BD (o en memoria).
+- **Respuesta:** JWT firmado en el cuerpo:
+```json
+{
+  "token": "<JWT>"
+}
+```
+- **Detalles de implementación:**
+  - Controlador `AuthController` con método `login()`.
+  - Servicio `AuthService` que autentica y genera el token usando `io.jsonwebtoken.Jwts`.
+
+---
+
+### Parte 2: Configurar filtros y validación del token
+
+- **Filtro JWT:** Clase `JwtAuthenticationFilter` extiende `OncePerRequestFilter`.
+  - Extrae el encabezado `Authorization: Bearer <token>`.
+  - Valida firma y fecha usando la clave secreta.
+  - Obtiene el `username` del token y carga `UserDetails`.
+  - Construye `UsernamePasswordAuthenticationToken` y lo inyecta en el contexto de Spring Security.
+- **Registro del filtro:** En la configuración de seguridad (`SecurityConfig`), se añade:
+```java
+http.addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
+```
+
+---
+
+### Parte 3: Proteger endpoints con Spring Security
+
+- **Permitir acceso público:** `/auth/login` sin token.
+- **Protección global:** Todos los demás endpoints requieren autenticación.
+- **Manejo de errores:** Configuración de `AuthenticationEntryPoint` y `AccessDeniedHandler` para respuestas 401 y 403 con mensajes JSON adecuados:
+```java
+http
+  .authorizeHttpRequests()
+    .requestMatchers("/auth/login").permitAll()
+    .anyRequest().authenticated()
+  .and()
+  .exceptionHandling()
+    .authenticationEntryPoint(restAuthenticationEntryPoint)
+    .accessDeniedHandler(restAccessDeniedHandler);
+```
+
+---
+
+### Parte 4: Aplicar roles a los endpoints
+
+| Rol  | Acciones permitidas                         |
+|------|---------------------------------------------|
+| USER | Crear tickets, ver solo sus propios tickets |
+| TECH | Ver todos los tickets, actualizar estado    |
+
+- **Con anotaciones `@PreAuthorize`:**
+```java
+@PreAuthorize("hasRole('USER')")
+public Ticket createTicket(...) { ... }
+
+@PreAuthorize("hasRole('TECH')")
+public Ticket updateTicketStatus(...) { ... }
+```
+
+- **O con reglas en `SecurityFilterChain`:**
+```java
+http
+  .authorizeHttpRequests()
+    .requestMatchers(HttpMethod.POST, "/tickets").hasRole("USER")
+    .requestMatchers(HttpMethod.PUT, "/tickets").hasRole("TECH");
+```
+
+---
+
+### Parte 5: Agregar Docker
+
+1. **Dockerfile:** Basado en `eclipse-temurin:21-jre-jammy`, copia el `.jar` y expone el puerto 8080.
+
+2. **docker-compose.yml:** Define servicios:
+   - **app:** construye desde el Dockerfile.
+   - **db:** usa `postgres:17`, volumen para persistencia, variables de entorno:
+     ```yaml
+     POSTGRES_DB: supportdb
+     POSTGRES_USER: postgres
+     POSTGRES_PASSWORD: root
+     ```
+
+3. **Levantamiento del entorno:**
+```bash
+docker compose up --build
+```
+
+---
+
+### Parte 6: Evidencia de pruebas
+
+- **Usuarios de prueba:**
+  - USER / user123
+  - TECH / tech123
+
+- **Flujos validados:**
+  1. Login exitoso y obtención de JWT.
+  2. Creación de ticket (USER) – verifica propietario.
+  3. Intento de creación de ticket sin token – recibe 401.
+  4. Listar tickets (USER) – solo propios.
+  5. Actualizar estado (TECH) – éxito.
+  6. Intento de actualización por USER – recibe 403.
+
+- **Herramienta usada:** Postman o Insomnia.  
+  Se incluyen colecciones `.json` en la carpeta `/evidencias` del repositorio.
+
+---
+
+**Fin del README**
