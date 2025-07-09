@@ -3,9 +3,9 @@
 Este repositorio contiene un proyecto para evaluar y practicar los conceptos de seguridad en aplicaciones Spring Boot usando JWT, roles y Docker.
 
 ### Estudiantes
-- **Nombre del estudiante 1**: [Tu nombre aquí] - [Carnet aquí]
-- **Nombre del estudiante 2**: [Tu nombre aquí] - [Carnet aquí]
-- Sección: [Tu sección aquí]
+- **Nombre del estudiante 1**: Carlo Enrique Guerra Vega - 00052220
+- **Nombre del estudiante 2**: Kelvin Rodrigo Iraheta Morales - 00083121
+- Sección: 01
 ---
 
 ## Sistema de Soporte Técnico
