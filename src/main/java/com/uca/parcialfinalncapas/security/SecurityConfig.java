@@ -13,48 +13,45 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @Configuration
 public class SecurityConfig {
 
-    private final UserServiceImpl userService;
     private final JwtRequestFilter jwtFilter;
+    private final JwtAuthenticationEntryPoint authEntryPoint;
+    private final CustomAccessDeniedHandler accessDeniedHandler;
 
-    public SecurityConfig(@Lazy UserServiceImpl userService,
-                          JwtRequestFilter jwtFilter) {
-        this.userService = userService;
+    public SecurityConfig(
+            @Lazy JwtRequestFilter jwtFilter,
+            JwtAuthenticationEntryPoint authEntryPoint,
+            CustomAccessDeniedHandler accessDeniedHandler
+    ) {
         this.jwtFilter = jwtFilter;
-    }
-
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
-
-    @Bean
-    public DaoAuthenticationProvider authenticationProvider(
-            UserServiceImpl userService,
-            PasswordEncoder passwordEncoder) {
-        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
-        provider.setUserDetailsService(userService);
-        provider.setPasswordEncoder(passwordEncoder);
-        return provider;
+        this.authEntryPoint = authEntryPoint;
+        this.accessDeniedHandler = accessDeniedHandler;
     }
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
                 .csrf().disable()
+
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint(authEntryPoint)
+                        .accessDeniedHandler(accessDeniedHandler)
+                )
+
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/login").permitAll()
                         .anyRequest().authenticated()
                 )
+
                 .sessionManagement(sess ->
                         sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 );
 
-        // Aquí registramos nuestro filtro justo antes del procesamiento de credenciales
-        http.addFilterBefore(jwtFilter,
+
+        http.addFilterBefore(
+                jwtFilter,
                 UsernamePasswordAuthenticationFilter.class
         );
 
         return http.build();
     }
-    }
-
+}
