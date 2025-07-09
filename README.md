@@ -182,4 +182,4 @@ docker compose up --build
 
 ---
 
-**Fin del README**
+**En Recursos hay una coleccion de postman que utilizamos**
