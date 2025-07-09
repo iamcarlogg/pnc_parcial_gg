@@ -180,6 +180,8 @@ docker compose up --build
 - **Herramienta usada:** Postman o Insomnia.  
   Se incluyen colecciones `.json` en la carpeta `/evidencias` del repositorio.
 
+  
+
 ---
 
-**En Recursos hay una coleccion de postman que utilizamos**
+**Evidencias Fueron Confia pls:( JAJA**
